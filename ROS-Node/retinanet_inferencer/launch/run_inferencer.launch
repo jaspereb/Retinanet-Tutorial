@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<!-- Boot up the retinanet detector node. This will attempt to launch on the GPU aand may take up a lot of resources -->
+<launch>
+    <arg name="inferencer_sub_topic" default="/object_detection_input"/>
+    <arg name="inferencer_pub_topic" default="/object_detection_output"/>
+    <arg name="inferencer_img_pub_topic" default="/object_detection_output_image"/>
+    <arg name="confidence_cutoff" default="0.5"/>
+    <arg name="model_path" default="/mnt/0FEF1F423FF4C54B/TrainingOutput/KerasRetinanet/snapshots/forInference.h5"/>
+
+    <node pkg="retinanet_inferencer" type="run_inferencer.py" name="retinanet_inferencer" output="screen" args="$(arg inferencer_sub_topic) $(arg inferencer_pub_topic) $(arg inferencer_img_pub_topic) $(arg confidence_cutoff) $(arg model_path)"/>
+</launch>
