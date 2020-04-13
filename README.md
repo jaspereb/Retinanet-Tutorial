@@ -5,15 +5,15 @@ It is based on the excellent [keras-retinanet](https://github.com/fizyr/keras-re
 
 The fizyr implementation we will be using has several data formatting options (and you could even write your own). The CSV input format is probably the easiest to understand and generate, BUT it's non standard and if you ever want to use a different network you would need to convert it. Because of that, we will be using the Pascal VOC 2007 format for our data. Then if you need it in the future, there are tools to easily convert to other formats (like COCO).
 
-#ROS?
+# ROS?
 ROS is the Robot Operating System. Included in this repository is a ROS node to run the detector as part of a robot perception system. Even if you don't have a robot, ROS drivers exist for most types of cameras so this is an easy way to get live data streams and inference results set up. If you only care about inferencing a single image just use the testDetector.py script. If you would like to use the ROS node, see USING_ROS.md in the ROS-Node folder. 
 
-#Should I use this tutorial?
+# Should I use this tutorial?
 This tutorial is aimed at people who don't have a lot of experience with linux or machine learning. If you only have a passing acquaintance with bash, or care more about getting something to work than understanding the mechanisms behind it, then this is the tutorial for you. You should be able to follow the steps in the video exactly, and get a result that works. 
 
 This is only for linux users, everything will be in Ubuntu using an Nvidia GPU. 
 
-#Installation
+# Installation
 The first issues that most deep learning practicioners run into are installation errors, so here's some brief advice on installing stuff. 
 
 Most errors come from version mismatches, so make sure you get this right the first time, it's much faster to just downgrade a component than to assume a higher version will work. The key components you need to install are Nvidia drivers, CUDA, CUDNN, tensorflow, keras and a bunch of python libraries. While you can run this without a GPU, it's so slow that it's not worth it.
@@ -21,13 +21,56 @@ Most errors come from version mismatches, so make sure you get this right the fi
 * NVIDIA Drivers. These are a massive pain in Ubuntu and can easily leave you with a broken OS if you do it wrong. The most reliable method I have found is to download the most recent driver version from https://www.nvidia.com/Download/index.aspx. This will give you a file like `NVIDIA-Linux-x86_64-440.82.run`. You want to close x server in order to install it (this command will drop you into terminal only mode, no graphics, so have these instructions on a separate computer!), to do this press `CTRL+ALT+F1` or `CTRL+ALT+F2`
 
 
-#Creating the dataset
+# Creating the dataset
 The first step to creating your dataset is to pick the format you want to use, we will go with Pascal VOC 2007 here, but you could also use the CSV format or COCO. 
 
 
+# Setting up training
+To setup and run training use the commands
 
-#FAQ
-##How big should my images be?
+`mkdir -p ~/RetinanetTutorial/TrainingOutput/snapshots` 
+
+`cd ~/RetinanetTutorial/keras-retinanet/`
+
+`keras_retinanet/bin/train.py --tensorboard-dir ~/RetinanetTutorial/TrainingOutput --snapshot-path ~/RetinanetTutorial/TrainingOutput/snapshots --random-transform --steps 3000 pascal ~/RetinanetTutorial/PlumsVOC`
+
+# Training
+Training will likely take several hours, depending on your dataset. You will want to open tensorboard to monitor the progress of it. You should also keep an eye on the free disk space where you are saving the model checkpoints, because this can fill up fast and crash your training. 
+
+Tensorboard stats will only show up once a validation step has been run, so initially it will say "No scalar data was found" which is normal.
+
+One final thing to check is that the GPU is actually being used, you can do this by running 
+
+`nvidia-smi` 
+
+and looking at the memory usage, which should be around 90% of your GPU. If it is more like 20% there was probably a CUDA error which prevented you from using the GPU, check the messages at the top of the terminal just after you run the train.py script and look for library import errors.
+
+Train until the tensorboard curves flatten out. 
+
+# Deploying
+Once training has finished you want to grab the best (lowest classification_loss) model and convert this to inference mode. In the tensorboard output find the lowest point on the classification_loss curve (alternatively the highest mAP), this will have a step number if you mouse over it. The step index is from zero whereas the snapshots start from 1 so add 1 to the step value and find that .h5 file in the snapshots directory you set during training. Copy this file to somewhere you want to keep it then convert it to an inference model.
+
+If the lowest step loss was step 5 the commands are 
+
+`mkdir ~/RetinanetTutorial/RetinanetModels`
+
+`cp ~/RetinanetTutorial/TrainingOutput/snapshots/resnet50_pascal_06.h5 ~/RetinanetTutorial/RetinanetModels/PlumsTraining.h5`
+
+`cd ~/RetinanetTutorial/keras-retinanet/`
+
+`keras_retinanet/bin/convert_model.py ~/RetinanetTutorial/RetinanetModels/PlumsTraining.h5 ~/RetinanetTutorial/RetinanetModels/PlumsInference.h5`
+
+You can run the `testDetector.py` script using
+
+`python ../Retinanet-Tutorial/testDetector.py`
+
+which will overwrite the `plumsTest_detected.png` image in Retinanet-Tutorial with the new detections. 
+
+# Running the ROS node
+To package this up into a ROS node see USING_ROS.md in the ROS-Node folder.
+
+# FAQ
+## How big should my images be?
 The TLDR is, images of most reasonable sizes and aspect ratios will work. If your images are super small (less than 300px a side) or super big (more than 2000px a side) you may have issues with the default anchor sizes. You could either resize your training and inference images to something like 800*800 or adjust the default anchors to suit your objects. But train the network and see if it works on your native images first. For very large images you may also run out of GPU memory.
 
 Retinanet will automatically resize images based on the settings in the generator.py file for your dataset. The defaults are to make the minimum image side 800px and the max side 1333px. This function looks like:
@@ -77,10 +120,10 @@ Rather than relying on the resizing step in the code, I prefer to just resize th
 
 The anchor ratios will multiply the x dimension and divide the y dimension, so if you have an aspect ratio of 0.5 your 256x256 anchor becomes 128x512.
 
-##How long should I train for?
+## How long should I train for?
 That depends a lot on how hard your problem is and how big the dataset is. Using a 1080Ti I could get a reasonable detector within an hour of training but would continue to improve for about 12hrs. Generally you want to look at your test set loss and that should decrease rapidly then flatten out. You want to stop training just as the curve flattens out (before you start over fitting too much). This is where tensorboard comes in useful.
 
-##How many images do I need?
+## How many images do I need?
 Again, this is mostly dependent on how hard your problem is. I've trained weed detectors using 20 images (~15 weeds per image) and gotten something usable, more data will obviously improve the accuracy. I would recommend starting small, maybe 1 hour of labelling effort to begin with. And you should be able to tell if the detector will work based on the results of that, before you scale up the dataset to improve accuracy.
 
 The COCO dataset has 1.5 million object instances! Pascal VOC 2007 has 24,640 object instances over 20 classes, so roughly 1000 objects per class. It's actually not that hard to label that many instances, if each one takes 5 seconds that's about 2 hours of labelling for a 1 class detector. 
