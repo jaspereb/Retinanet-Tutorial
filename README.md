@@ -214,7 +214,7 @@ You can run the `testDetector.py` script using
 which will overwrite the `plumsTest_detected.png` image in Retinanet-Tutorial with the new detections. 
 
 # Running the ROS node
-To package this up into a ROS node see USING_ROS.md in the ROS-Node folder.
+To package this up into a ROS node see [USING_ROS.md](ROS-Node/USING_ROS.md) in the ROS-Node folder.
 
 # FAQ
 ## How big should my images be?
