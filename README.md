@@ -1,6 +1,8 @@
 # Retinanet-Tutorial
 This is a tutorial created for the sole purpose of helping you quickly and easily train an object detector for your own dataset. It is an improvement over my [previous tutorial](https://github.com/jaspereb/FasterRCNNTutorial) which used the now outdated FasterRCNN network and tensorflow. This tutorial makes use of keras and tensorboard.
 
+![alt text][assets/Splash.png]
+
 It is based on the excellent [keras-retinanet](https://github.com/fizyr/keras-retinanet) implementation by fizyr which you should definitely read if you have time. This includes a sample dataset of images of plums but is intended to help you train your on your own dataset. This is a step which is often not well documented and can easily trip up new developers with specific data formatting requirements that aren't at all obvious. The idea of this tutorial is that you can use the instructions here, and when you get stuck refer to the screen recording of the entire process at YOUTUBE LINK HERE.
 
 The fizyr implementation we will be using has several data formatting options (and you could even write your own). The CSV input format is probably the easiest to understand and generate, BUT it's non standard and if you ever want to use a different network you would need to convert it. Because of that, we will be using the Pascal VOC 2007 format for our data. Then if you need it in the future, there are tools to easily convert to other formats (like COCO).
@@ -84,6 +86,74 @@ then download the following (you should have a [github SSH key](https://help.git
 # Creating the dataset
 The first step to creating your dataset is to pick the format you want to use, we will go with Pascal VOC 2007 here, but you could also use the CSV format or COCO. 
 
+There are 3 foldes in the Pascal VOC format, JPEGImages, Annotations (which has .xml files) and ImageSets/Main (which has .txt files listing the data). 
+
+## Making JPEGImages
+I will be starting from a folder of JPEG images extracted randomly from a video stream. The first step is to cull them down to a manageable number (15 for us). When selecting images to add to the dataset we are looking for ones which are diverse, clear, easy to label and not blurry or obscured. 
+
+Select 15 of the images and copy these into a new directory called `~/RetinanetTutorial/Data`. 
+
+The names will all be out of order, which it's not actually neccessary, I like to batch rename them at this point which can save a lot of time in future if you need to combine datasets. Do this using the thunar tool.
+
+`sudo apt-get install thunar`
+
+`cd ~/RetinanetTutorial/Data`
+
+`thunar`
+
+Then `CTRL-a` to select everything, right click on one image and select rename, you should get a window like the following:
+
+![alt text][assets/Rename.png]
+
+Make sure the settings at the bottom are as shown, then click Rename Files. If you add data in future, increase the Batch#_ number and you can just copy the new files into the VOC folders. 
+
+Once the JPG files are renamed we can set up the final VOC folder structure and move them into it using
+
+`mkdir -p ~/RetinanetTutorial/PlumsVOC/JPEGImages`
+
+`mkdir ~/RetinanetTutorial/PlumsVOC/Annotations`
+
+`mkdir -p ~/RetinanetTutorial/PlumsVOC/ImageSets/Main`
+
+`cp ~/RetinanetTutorial/Data/ ~/RetinanetTutorial/PlumsVOC/JPEGImages`
+
+## Labelling
+To make the Annotations folder we will use the `labelimg` tool. You have already git cloned that so you should be able to run
+
+`cd ~/RetinanetTutorial/labelImg`
+
+`sudo apt-get install pyqt5-dev-tools`
+
+`sudo pip3 install -r requirements/requirements-linux-python3.txt`
+
+`make qt5py3`
+
+`python3 labelImg.py`
+
+Make sure to tick the `View > Auto Save Mode checkbox` then click `Open Dir` and set it to `~/RetinanetTutorial/PlumsVOC/JPEGImages`, `Change Save Dir` and set it to `~/RetinanetTutorial/PlumsVOC/Annotations`. Ensure PascalVOC is selected under </> and then click `Create\nRectBox`. Tick the `Use Default Label` box on the right and type `redPlum` beside it. 
+
+Now you can start labelling! The W key adds a new bounding box, you can select and delete them using the list on the right. You can also zoom with `CTRL-Scroll` and can grab the bounding box corners to adjust them. Click `Next Image` when you are done labelling each one and you should see .xml files start to appear in the `Annotations` folder. 
+
+Go through an label every image in the `JPEGImages` folder. If you don't want to do every one, you can extract the PlumsVOC.zip sample dataset from this repo and use that instead. 
+
+## Making ImageSets
+The `ImageSets/Main` folder needs to contain 3 files. `trainval.txt` lists every JPEGImages file without the extension, there will already be an xml file in `Annotations` with the same name as every JPG file. `train.txt` is a subset of `trainval.txt` with all the images you want to train on. `test.txt` is a subset of `trainval.txt` with all the images you want to test (validate) on. There should be no overlap between `train` and `test`. 
+
+To make these:
+
+`cd ~/RetinanetTutorial/PlumsVOC/ImageSets/Main`
+
+`ls ../../JPEGImages/ > trainval.txt`
+
+`sed -i 's/.jpg//g' trainval.txt`
+
+`touch test.txt`
+
+`cp trainval.txt train.txt`
+
+Then open both `train.txt` and `test.txt` side by side. Cut and paste entries from train into test. The split should be around 60% of the total files in `train.txt` and the rest in `test.txt`.
+
+You have now created a Pascal VOC format dataset for object detection. 
 
 # Setting up training
 To setup and run training use the commands
@@ -205,15 +275,4 @@ Again, this is mostly dependent on how hard your problem is. I've trained weed d
 
 The COCO dataset has 1.5 million object instances! Pascal VOC 2007 has 24,640 object instances over 20 classes, so roughly 1000 objects per class. It's actually not that hard to label that many instances, if each one takes 5 seconds that's about 2 hours of labelling for a 1 class detector. 
 
-
-
-
-
-
-
-
-
-
-NOTES:
--change pascal_voc.py classes to be only plum
 
