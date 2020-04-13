@@ -16,10 +16,70 @@ This is only for linux users, everything will be in Ubuntu using an Nvidia GPU.
 # Installation
 The first issues that most deep learning practicioners run into are installation errors, so here's some brief advice on installing stuff. 
 
-Most errors come from version mismatches, so make sure you get this right the first time, it's much faster to just downgrade a component than to assume a higher version will work. The key components you need to install are Nvidia drivers, CUDA, CUDNN, tensorflow, keras and a bunch of python libraries. While you can run this without a GPU, it's so slow that it's not worth it.
+Most errors come from version mismatches, so make sure you get this right the first time, it's much faster to just downgrade a component than to assume a higher version will work. The key components you need to install are Nvidia drivers, CUDA, CUDNN, tensorflow, keras and a bunch of python libraries. While you can run this without a GPU, it's so slow that it's not worth it. I will use python2 for everything but python3 should work just fine.
 
-* NVIDIA Drivers. These are a massive pain in Ubuntu and can easily leave you with a broken OS if you do it wrong. The most reliable method I have found is to download the most recent driver version from https://www.nvidia.com/Download/index.aspx. This will give you a file like `NVIDIA-Linux-x86_64-440.82.run`. You want to close x server in order to install it (this command will drop you into terminal only mode, no graphics, so have these instructions on a separate computer!), to do this press `CTRL+ALT+F1` or `CTRL+ALT+F2`
+* NVIDIA Drivers. These are a massive pain in Ubuntu and can easily leave you with a broken OS if you do it wrong. The most reliable method I have found is to download the most recent driver version from https://www.nvidia.com/Download/index.aspx. This will give you a file like `NVIDIA-Linux-x86_64-440.82.run`. You want to close x server in order to install it (this command will drop you into terminal only mode, no graphics, so have these instructions on a separate computer!), to do this press `CTRL+ALT+F1` or `CTRL+ALT+F2` then run
 
+`sudo service lightdm stop`
+
+`sudo init 3`
+
+`cd ~/Downloads`
+
+`sudo chmod +x [Your Driver .run File]`
+
+`sudo ./[Your Driver .run File]`
+
+* CUDA 10.0. Download this from https://developer.nvidia.com/cuda-10.0-download-archive and the steps to install it are quite similar to that of the driver. **Do not let it install the Nvidia driver when it asks to** only install CUDA.
+
+`CTRL+ALT+F1` or `CTRL+ALT+F2`
+
+`sudo service lightdm stop`
+
+`sudo init 3`
+
+`cd ~/Downloads`
+
+`sudo chmod +x [Your CUDA .run File]`
+
+`sudo ./[Your CUDA .run File]`
+
+`sudo reboot now`
+
+* CUDNN for CUDA 10.0. You need an NVIDIA account to get this download from https://developer.nvidia.com/rdp/form/cudnn-download-survey. Get whatever the lastest version for CUDA 10.0 is. This will give you a .tgz file, unzip and install it using
+
+`cd ~/Downloads`
+
+`tar -xzvf [Your CUDNN .tgz File]`
+
+`sudo cp cuda/include/cudnn.h /usr/local/cuda/include`
+
+`sudo cp cuda/lib64/libcudnn* /usr/local/cuda/lib64`
+
+`sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*`
+
+* Tensorflow 1
+
+`pip install --user --upgrade tensorflow-gpu`
+
+* Keras (not tensorflow-keras)
+
+`sudo pip install keras`
+
+# Getting the tools
+Run
+
+`mkdir ~/RetinanetTutorial`
+
+`cd ~/RetinanetTutorial`
+
+then download the following (you should have a [github SSH key](https://help.github.com/en/enterprise/2.17/user/github/authenticating-to-github/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent) setup already) 
+
+* This repo `git clone https://github.com/jaspereb/Retinanet-Tutorial.git`
+
+* The keras-retinanet repo `git clone git@github.com:fizyr/keras-retinanet.git`
+
+* The labelimg tool `git clone git@github.com:tzutalin/labelImg.git`
 
 # Creating the dataset
 The first step to creating your dataset is to pick the format you want to use, we will go with Pascal VOC 2007 here, but you could also use the CSV format or COCO. 
@@ -32,10 +92,27 @@ To setup and run training use the commands
 
 `cd ~/RetinanetTutorial/keras-retinanet/`
 
+We need to change the data generator which currently expects the default Pascal VOC classes so run 
+
+`gedit keras_retinanet/preprocessing/pascal_voc.py`
+
+and change from line 30 onwards so that it looks like
+
+    voc_classes = {
+        'redPlum'        : 0,
+        'greenPlum'      : 1
+    }
+
+finally, we are ready to start training 
+
 `keras_retinanet/bin/train.py --tensorboard-dir ~/RetinanetTutorial/TrainingOutput --snapshot-path ~/RetinanetTutorial/TrainingOutput/snapshots --random-transform --steps 3000 pascal ~/RetinanetTutorial/PlumsVOC`
 
 # Training
-Training will likely take several hours, depending on your dataset. You will want to open tensorboard to monitor the progress of it. You should also keep an eye on the free disk space where you are saving the model checkpoints, because this can fill up fast and crash your training. 
+Training will likely take several hours, depending on your dataset. You will want to open tensorboard to monitor the progress of it. You should also keep an eye on the free disk space where you are saving the model checkpoints, because this can fill up fast and crash your training. Run tensorboard using
+
+`tensorboard --logdir ~/RetinanetTutorial/TrainingOutput`
+
+then open `http://localhost:6006/` in a browser tab. 
 
 Tensorboard stats will only show up once a validation step has been run, so initially it will say "No scalar data was found" which is normal.
 
@@ -71,7 +148,7 @@ To package this up into a ROS node see USING_ROS.md in the ROS-Node folder.
 
 # FAQ
 ## How big should my images be?
-The TLDR is, images of most reasonable sizes and aspect ratios will work. If your images are super small (less than 300px a side) or super big (more than 2000px a side) you may have issues with the default anchor sizes. You could either resize your training and inference images to something like 800*800 or adjust the default anchors to suit your objects. But train the network and see if it works on your native images first. For very large images you may also run out of GPU memory.
+The TLDR is, images of most reasonable sizes and aspect ratios will work. If your images are super small (less than 300px a side) or super big (more than 2000px a side) you may have issues with the default anchor sizes. You could either resize your training and inference images to something like 800x800 or adjust the default anchors to suit your objects. But train the network and see if it works on your native images first. For very large images you may also run out of GPU memory.
 
 Retinanet will automatically resize images based on the settings in the generator.py file for your dataset. The defaults are to make the minimum image side 800px and the max side 1333px. This function looks like:
 
@@ -102,7 +179,7 @@ Retinanet will automatically resize images based on the settings in the generato
 
 If you have very large images (\> 3MP which you would get off a DSLR) you may also run out of GPU memory, the best approach is to resize these to X by 800. If you have tiny objects in large images you many need to crop them into tiles using imagemagick and train on each tile. Retinanet's default anchor sizes are in the keras-retinanet/utils/anchors.py file and range from 32px to 512px with additional scaling. So objects smaller than 30px will not be well detected. If your objects are less than this after resizing the images to be X by 800 you will need to use more tiles.
 
-So for a 6000x4000 image with objects that are originally 100x100 pix, it would get resized to 1200*800 and the objects would be 20x20px, which are too small.
+So for a 6000x4000 image with objects that are originally 100x100 pix, it would get resized to 1200x800 and the objects would be 20x20px, which are too small.
 
 To crop the above image into 4 tiles run the following command (if not given a crop location than imagemagick will tile them). Then delete any offcuts which are created.
 
