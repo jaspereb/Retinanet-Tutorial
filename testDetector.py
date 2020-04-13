@@ -24,9 +24,9 @@ from PIL import Image
 # set tf backend to allow memory to grow, instead of claiming everything
 import tensorflow as tf
 
-model_path = '/home/jasper/Datasets/OriginalData/resnet50_coco_best_v2.1.0.h5'
-image_path = '/home/jasper/git/Retinanet-Tutorial/plumsTest.png'
-image_output_path = '/home/jasper/git/Retinanet-Tutorial/plumsTest_detected.png'
+model_path = '~/RetinanetTutorial/RetinanetModels/PlumsInference.h5'
+image_path = '~/RetinanetTutorial/Retinanet-Tutorial/plumsTest.png'
+image_output_path = '~/RetinanetTutorial/Retinanet-Tutorial/plumsTest_detected.png'
 confidence_cutoff = 0.5 #Detections below this confidence will be ignored
 
 def get_session():
