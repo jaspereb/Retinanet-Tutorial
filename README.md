@@ -93,7 +93,7 @@ I will be starting from a folder of JPEG images extracted randomly from a video 
 
 Select 15 of the images and copy these into a new directory called `~/RetinanetTutorial/Data`. 
 
-The names will all be out of order, which it's not actually neccessary, I like to batch rename them at this point which can save a lot of time in future if you need to combine datasets. Do this using the thunar tool.
+The names will all be out of order, and while it's not actually neccessary I like to batch rename them at this point which can save a lot of time in future if you need to combine datasets. Do this using the thunar tool.
 
 `sudo apt-get install thunar`
 
