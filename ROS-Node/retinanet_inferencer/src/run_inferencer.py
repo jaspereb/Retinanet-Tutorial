@@ -3,6 +3,8 @@
 # jasperebrown@gmail.com
 # 2020
 
+# IMPORTANT: This is a node wrapper for the detector object, the model should be set there
+
 # Retinanet stuff
 import keras
 from keras_retinanet import models
@@ -18,10 +20,11 @@ import time
 
 # ROS Stuff
 import rospy
-from std_msgs.msg import String
+from std_msgs.msg import String, Header
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
-from vision_msgs.msg import Detection2D, BoundingBox2D
+from vision_msgs.msg import Detection2D, Detection2DArray, BoundingBox2D, ObjectHypothesisWithPose
+from geometry_msgs.msg import Pose2D
 import rospkg
 from cv_bridge import CvBridge
 from copy import deepcopy
@@ -50,7 +53,7 @@ class ROS_Detector(object):
 			self.confidence_cutoff = args[4]
 			self.model_path = args[5]
 
-		self.detections_pub = rospy.Publisher(det_pub_topic, Detection2D, queue_size=10, latch=True)
+		self.detections_pub = rospy.Publisher(det_pub_topic, Detection2DArray, queue_size=10, latch=True)
 		self.img_pub = rospy.Publisher(img_pub_topic, Image, queue_size=10, latch=True)
 		self.bridge = CvBridge()
 
@@ -96,6 +99,12 @@ class ROS_Detector(object):
 		# correct for image scale
 		boxes /= scale
 
+		# Construct the detection message
+		header = Header(frame_id=imageMsg.header.frame_id)
+		detections_message_out = Detection2DArray()
+		detections_message_out.header = header
+		detections_message_out.detections = []
+
 		# visualize detections
 		for box, score, label in zip(boxes[0], scores[0], labels[0]):
 			# scores are sorted so we can break
@@ -114,6 +123,24 @@ class ROS_Detector(object):
 
 			cv2.putText(draw, caption, (b[0], b[1] - 10), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0), 2)
 			cv2.putText(draw, caption, (b[0], b[1] - 10), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
+
+			#Construct the output detection message
+			bb = BoundingBox2D()
+			det = Detection2D(header=header)
+			hyp = ObjectHypothesisWithPose()
+			center = Pose2D()
+			hyp.id = label
+			hyp.score = score
+			bb.size_x = b[2] - b[0]
+			bb.size_y = b[3] - b[1]
+			center.x = float(b[2] + b[0])/2
+			center.y = float(b[3] + b[1])/2
+			bb.center = center
+			det.results.append(hyp)
+			det.bbox = bb
+			detections_message_out.detections.append(det)
+
+		self.detections_pub.publish(detections_message_out)
 
 		# Write out image
 		image_message_out = self.bridge.cv2_to_imgmsg(draw, encoding="rgb8")
