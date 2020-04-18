@@ -1,7 +1,7 @@
 # Retinanet-Tutorial
 This is a tutorial created for the sole purpose of helping you quickly and easily train an object detector for your own dataset. It is an improvement over my [previous tutorial](https://github.com/jaspereb/FasterRCNNTutorial) which used the now outdated FasterRCNN network and tensorflow. This tutorial makes use of keras and tensorboard.
 
-![alt text](assets/Splash.png)
+![Sample Detections](assets/Splash.jpg)
 
 It is based on the excellent [keras-retinanet](https://github.com/fizyr/keras-retinanet) implementation by fizyr which you should definitely read if you have time. This includes a sample dataset of images of plums but is intended to help you train your on your own dataset. This is a step which is often not well documented and can easily trip up new developers with specific data formatting requirements that aren't at all obvious. The idea of this tutorial is that you can use the instructions here, and when you get stuck refer to the screen recording of the entire process at YOUTUBE LINK HERE.
 
