@@ -89,9 +89,12 @@ The first step to creating your dataset is to pick the format you want to use, w
 There are 3 foldes in the Pascal VOC format, JPEGImages, Annotations (which has .xml files) and ImageSets/Main (which has .txt files listing the data). 
 
 ## Making JPEGImages
-I will be starting from a folder of JPEG images extracted randomly from a video stream. The first step is to cull them down to a manageable number (15 for us). When selecting images to add to the dataset we are looking for ones which are diverse, clear, easy to label and not blurry or obscured. 
+I will be starting from a folder of JPEG images extracted randomly from a video stream. The first step is to cull them down to a manageable number (15 for our simple demonstration). When selecting images to add to the dataset we are looking for ones which are diverse, clear, easy to label and not blurry or obscured. 
 
-Select 15 of the images and copy these into a new directory called `~/RetinanetTutorial/Data`. 
+Make the data directory
+`mkdir ~/RetinanetTutorial/Data`
+
+Select 15 of the images in `~/RetinanetTutorial/Raw_Data` and copy these into the data directory called `~/RetinanetTutorial/Data`. 
 
 The names will all be out of order, and while it's not actually neccessary I like to batch rename them at this point which can save a lot of time in future if you need to combine datasets. Do this using the thunar tool.
 
@@ -105,7 +108,7 @@ Then `CTRL-a` to select everything, right click on one image and select rename, 
 
 ![Image](assets/Rename.png)
 
-Make sure the settings at the bottom are as shown, then click Rename Files. If you add data in future, increase the Batch#_ number and you can just copy the new files into the VOC folders. 
+Make sure the settings at the bottom are as shown, then click Rename Files. If you add data in future, increase the Batch#_ number and you can just copy the new files into the VOC folders. Now close thunar.
 
 Once the JPG files are renamed we can set up the final VOC folder structure and move them into it using
 
@@ -115,7 +118,7 @@ Once the JPG files are renamed we can set up the final VOC folder structure and 
 
 `mkdir -p ~/RetinanetTutorial/PlumsVOC/ImageSets/Main`
 
-`cp ~/RetinanetTutorial/Data/ ~/RetinanetTutorial/PlumsVOC/JPEGImages`
+`cp ~/RetinanetTutorial/Data/* ~/RetinanetTutorial/PlumsVOC/JPEGImages`
 
 ## Labelling
 To make the Annotations folder we will use the `labelimg` tool. You have already git cloned that so you should be able to run
@@ -132,12 +135,14 @@ To make the Annotations folder we will use the `labelimg` tool. You have already
 
 Make sure to tick the `View > Auto Save Mode checkbox` then click `Open Dir` and set it to `~/RetinanetTutorial/PlumsVOC/JPEGImages`, `Change Save Dir` and set it to `~/RetinanetTutorial/PlumsVOC/Annotations`. Ensure PascalVOC is selected under </> and then click `Create\nRectBox`. Tick the `Use Default Label` box on the right and type `redPlum` beside it. 
 
+We're going to add a 2nd class just for fun, so label some of the plums as 'greenPlum' by changing the text in default label before labelling them. Don't forget to change it back to redPlum for most of the examples. 
+
 Now you can start labelling! The W key adds a new bounding box, you can select and delete them using the list on the right. You can also zoom with `CTRL-Scroll` and can grab the bounding box corners to adjust them. Click `Next Image` when you are done labelling each one and you should see .xml files start to appear in the `Annotations` folder. 
 
-Go through an label every image in the `JPEGImages` folder. If you don't want to do every one, you can extract the PlumsVOC.zip sample dataset from this repo and use that instead. 
+Go through and label every image in the `JPEGImages` folder. If you don't want to do labelling, you can extract the PlumsVOC.zip sample dataset from this repo and use that instead, you will still need to do the 'Making ImageSets' step. 
 
 ## Making ImageSets
-The `ImageSets/Main` folder needs to contain 3 files. `trainval.txt` lists every JPEGImages file without the extension, there will already be an xml file in `Annotations` with the same name as every JPG file. `train.txt` is a subset of `trainval.txt` with all the images you want to train on. `test.txt` is a subset of `trainval.txt` with all the images you want to test (validate) on. There should be no overlap between `train` and `test`. 
+The `ImageSets/Main` folder needs to contain 3 files. `trainval.txt` lists every JPEGImages file without the extension, there will already be an xml file in `Annotations` with the same name as every JPG file. `train.txt` is a subset of `trainval.txt` with all the images you want to train on. `val.txt` is a subset of `trainval.txt` with all the images you want to test (validate) on. There should be no overlap between `train` and `val`. 
 
 To make these:
 
@@ -147,11 +152,11 @@ To make these:
 
 `sed -i 's/.jpg//g' trainval.txt`
 
-`touch test.txt`
+`touch val.txt`
 
 `cp trainval.txt train.txt`
 
-Then open both `train.txt` and `test.txt` side by side. Cut and paste entries from train into test. The split should be around 60% of the total files in `train.txt` and the rest in `test.txt`.
+Then open both `train.txt` and `val.txt` side by side. Cut and paste entries from train into test. The split should be around 60% of the total files in `train.txt` and the rest in `val.txt`.
 
 You have now created a Pascal VOC format dataset for object detection. 
 
@@ -173,12 +178,29 @@ and change from line 30 onwards so that it looks like
         'greenPlum'      : 1
     }
 
-finally, we are ready to start training 
+save and close that file.
 
-`keras_retinanet/bin/train.py --tensorboard-dir ~/RetinanetTutorial/TrainingOutput --snapshot-path ~/RetinanetTutorial/TrainingOutput/snapshots --random-transform --steps 3000 pascal ~/RetinanetTutorial/PlumsVOC`
+Now we are going to build the keras-retinanet tutorial so we can use it
+
+`cd ~/RetinanetTutorial/keras-retinanet/`
+`pip install numpy --user`
+
+we are going to system install it, so that our test script can run from anywhere, if you don't want to use `testDetector.py` you can skip this
+
+`pip install . --user`
+
+then also build the local copy because we will use that for training it
+
+`python setup.py build_ext --inplace`
+
+then finally, we are ready to start training 
+
+`keras_retinanet/bin/train.py --tensorboard-dir ~/RetinanetTutorial/TrainingOutput --snapshot-path ~/RetinanetTutorial/TrainingOutput/snapshots --random-transform --steps 100 pascal ~/RetinanetTutorial/PlumsVOC`
+
+we are running with a very small steps value so that you can see the model progress on tensorboard after not many steps. The default value is 10000 and using such as small value will result in creating many snapshot files in `~/RetinanetTutorial/TrainingOutput/snapshots` so you may need to delete some of the older ones as it fills up. If you want to train a useful model, you should set this somewhere between 2000 and 10000 depending on how big your dataset is. 
 
 # Training
-Training will likely take several hours, depending on your dataset. You will want to open tensorboard to monitor the progress of it. You should also keep an eye on the free disk space where you are saving the model checkpoints, because this can fill up fast and crash your training. Run tensorboard using
+Training will likely take several hours, depending on your dataset. You will want to open tensorboard to monitor the progress of it. You should also keep an eye on the free disk space where you are saving the model checkpoints, because this can fill up fast and crash your training. Run tensorboard in a new terminal using
 
 `tensorboard --logdir ~/RetinanetTutorial/TrainingOutput`
 
