@@ -1,5 +1,5 @@
 # Retinanet-Tutorial
-This is a tutorial created for the sole purpose of helping you quickly and easily train an object detector for your own dataset. It is an improvement over my [previous tutorial](https://github.com/jaspereb/FasterRCNNTutorial) which used the now outdated FasterRCNN network and tensorflow. This tutorial makes use of keras and tensorboard.
+This is a tutorial created for the sole purpose of helping you quickly and easily train an object detector for your own dataset. It is an improvement over my [previous tutorial](https://github.com/jaspereb/FasterRCNNTutorial) which used the now outdated FasterRCNN network and tensorflow. This tutorial makes use of keras, tensorflow and tensorboard.
 
 ![Sample Detections](assets/Splash.jpg)
 
@@ -86,7 +86,7 @@ then download the following (you should have a [github SSH key](https://help.git
 # Creating the dataset
 The first step to creating your dataset is to pick the format you want to use, we will go with Pascal VOC 2007 here, but you could also use the CSV format or COCO. 
 
-There are 3 foldes in the Pascal VOC format, JPEGImages, Annotations (which has .xml files) and ImageSets/Main (which has .txt files listing the data). 
+There are 3 folders in the Pascal VOC format, JPEGImages, Annotations (which has .xml files) and ImageSets/Main (which has .txt files listing the data). 
 
 ## Making JPEGImages
 I will be starting from a folder of JPEG images extracted randomly from a video stream. The first step is to cull them down to a manageable number (15 for our simple demonstration). When selecting images to add to the dataset we are looking for ones which are diverse, clear, easy to label and not blurry or obscured. 
@@ -137,7 +137,7 @@ Make sure to tick the `View > Auto Save Mode checkbox` then click `Open Dir` and
 
 We're going to add a 2nd class just for fun, so label some of the plums as 'greenPlum' by changing the text in default label before labelling them. Don't forget to change it back to redPlum for most of the examples. 
 
-Now you can start labelling! The W key adds a new bounding box, you can select and delete them using the list on the right. You can also zoom with `CTRL-Scroll` and can grab the bounding box corners to adjust them. Click `Next Image` when you are done labelling each one and you should see .xml files start to appear in the `Annotations` folder. 
+Now you can start labelling! The W key adds a new bounding box, you can select and delete them using the list on the right. You can also zoom with `CTRL-Scroll` and can grab the bounding box corners to adjust them. Click `Next Image` when you are done labelling each one and you should see .xml files start to appear in the `Annotations` folder. When you get to the last image, make sure to manually save it by clicking the `Save` button.
 
 Go through and label every image in the `JPEGImages` folder. If you don't want to do labelling, you can extract the PlumsVOC.zip sample dataset from this repo and use that instead, you will still need to do the 'Making ImageSets' step. 
 
@@ -183,6 +183,7 @@ save and close that file.
 Now we are going to build the keras-retinanet tutorial so we can use it
 
 `cd ~/RetinanetTutorial/keras-retinanet/`
+
 `pip install numpy --user`
 
 we are going to system install it, so that our test script can run from anywhere, if you don't want to use `testDetector.py` you can skip this
@@ -197,10 +198,10 @@ then finally, we are ready to start training
 
 `keras_retinanet/bin/train.py --tensorboard-dir ~/RetinanetTutorial/TrainingOutput --snapshot-path ~/RetinanetTutorial/TrainingOutput/snapshots --random-transform --steps 100 pascal ~/RetinanetTutorial/PlumsVOC`
 
-we are running with a very small steps value so that you can see the model progress on tensorboard after not many steps. The default value is 10000 and using such as small value will result in creating many snapshot files in `~/RetinanetTutorial/TrainingOutput/snapshots` so you may need to delete some of the older ones as it fills up. If you want to train a useful model, you should set this somewhere between 2000 and 10000 depending on how big your dataset is. 
+we are running with a very small steps value so that you can see the model progress on tensorboard after not many steps. The default value is 10000 and using such as small value will result in creating many snapshot files in `~/RetinanetTutorial/TrainingOutput/snapshots` so you may need to delete some of the older ones as it fills up and uses a lot of disk space. If you want to train a useful model, you should set this somewhere between 2000 and 10000 depending on how big your dataset is. 
 
 # Training
-Training will likely take several hours, depending on your dataset. You will want to open tensorboard to monitor the progress of it. You should also keep an eye on the free disk space where you are saving the model checkpoints, because this can fill up fast and crash your training. Run tensorboard in a new terminal using
+Training will likely around half an hour, depending on your hardware. You will want to open tensorboard to monitor the progress of it. You should also keep an eye on the free disk space where you are saving the model checkpoints, because this can fill up fast and crash your training. Run tensorboard in a new terminal using
 
 `tensorboard --logdir ~/RetinanetTutorial/TrainingOutput`
 
@@ -217,7 +218,7 @@ and looking at the memory usage, which should be around 90% of your GPU. If it i
 Train until the tensorboard curves flatten out. 
 
 # Deploying
-Once training has finished you want to grab the best (lowest classification_loss) model and convert this to inference mode. In the tensorboard output find the lowest point on the classification_loss curve (alternatively the highest mAP), this will have a step number if you mouse over it. The step index is from zero whereas the snapshots start from 1 so add 1 to the step value and find that .h5 file in the snapshots directory you set during training. Copy this file to somewhere you want to keep it then convert it to an inference model.
+Once training has finished you want to grab the best (lowest loss) model and convert this to inference mode. In the tensorboard output find the lowest point on the loss curve (don't use classification_loss by accident), this will have a step number if you mouse over it. The step index is from zero whereas the snapshots start from 1 so add 1 to the step value and find that .h5 file in the snapshots directory you set during training. Copy this file to somewhere you want to keep it then convert it to an inference model.
 
 If the lowest step loss was step 5 the commands are 
 
@@ -229,11 +230,19 @@ If the lowest step loss was step 5 the commands are
 
 `keras_retinanet/bin/convert_model.py ~/RetinanetTutorial/RetinanetModels/PlumsTraining.h5 ~/RetinanetTutorial/RetinanetModels/PlumsInference.h5`
 
-You can run the `testDetector.py` script using
+Before you can run the `testDetector.py` script you will need to set a few things in it. Open it for editing with
+
+`cd ~/RetinanetTutorial/`
+
+`gedit testDetector.py`
+
+and set the paths on lines 27,28,29 to point to your new model, a test image and where to save the results. If you used a label other than `redPlum` you will need to edit line 62.
+
+then run it using
 
 `python ../Retinanet-Tutorial/testDetector.py`
 
-which will overwrite the `plumsTest_detected.png` image in Retinanet-Tutorial with the new detections. 
+which will by default overwrite the `plumsTest_detected.png` image in Retinanet-Tutorial with the new detections. 
 
 # Running the ROS node
 To package this up into a ROS node see [USING_ROS.md](ROS-Node/USING_ROS.md) in the ROS-Node folder.
